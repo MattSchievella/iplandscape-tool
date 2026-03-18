@@ -18,7 +18,7 @@ export function parseExcelFile(data: ArrayBuffer): ParseResult {
   // Parse config sheet if it exists
   let title = 'Default Project ipLandscape';
   let subtitle = '';
-  let titleFromConfig = false;
+
   let legend: LegendConfig = { ...DEFAULT_LEGEND };
   let branding: BrandingConfig = { ...DEFAULT_BRANDING };
 
@@ -29,7 +29,7 @@ export function parseExcelFile(data: ArrayBuffer): ParseResult {
     for (const row of configData) {
       const key = String(row.key || '').toLowerCase().trim();
       const value = String(row.value || '').trim();
-      if (key === 'title') { title = value; titleFromConfig = true; }
+      if (key === 'title') { title = value; }
       if (key === 'subtitle') subtitle = value;
       if (key === 'primary color' || key === 'primarycolor') branding = { ...branding, primaryColor: value };
       if (key === 'secondary color' || key === 'secondarycolor') branding = { ...branding, secondaryColor: value };
@@ -49,7 +49,7 @@ export function parseExcelFile(data: ArrayBuffer): ParseResult {
     return { project: createEmptyProject(), errors, warnings };
   }
 
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(dataSheet, { header: 1 }) as unknown[][];
+  const rows = XLSX.utils.sheet_to_json(dataSheet, { header: 1 }) as unknown[][];
 
   if (rows.length < 2) {
     errors.push('Data sheet must have at least a header row and one data row.');

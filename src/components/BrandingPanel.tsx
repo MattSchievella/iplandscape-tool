@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { BrandingConfig, LegendConfig } from '../types';
-import { extractColorsFromUrl, mapColorsToBranding, getLuminance } from '../utils/colorExtractor';
+import { extractColorsFromUrl, mapColorsToBranding } from '../utils/colorExtractor';
 
 interface BrandingPanelProps {
   branding: BrandingConfig;
