@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { useLandscapeData } from '../hooks/useLandscapeData';
 import { LandscapeCanvas } from './LandscapeCanvas';
-import { ExcelUploader } from './ExcelUploader';
+
 import { EditPanel } from './EditPanel';
 import { BrandingPanel } from './BrandingPanel';
 import { exportToPng, exportToSvg, exportToPdf, saveWithPicker } from '../utils/exportUtils';
@@ -38,7 +38,7 @@ export default function App() {
   const [sidePanel, setSidePanel] = useState<SidePanel>('none');
   const [editingBucket, setEditingBucket] = useState<{ categoryId: string; bucketId: string } | null>(null);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
-  const [showUploader, setShowUploader] = useState(project.categories.length === 0);
+
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [stylizePanelOpen, setStylizePanelOpen] = useState(false);
   const [stylizePrompt, setStylizePrompt] = useState(DEFAULT_STYLIZE_PROMPT);
@@ -89,7 +89,7 @@ export default function App() {
       const text = await file.text();
       try {
         importProjectJson(text);
-        setShowUploader(false);
+        
       } catch {
         alert('Invalid project file');
       }
@@ -177,7 +177,7 @@ export default function App() {
                   return;
                 }
                 loadProject(result.project);
-                setShowUploader(false);
+                
               } catch (err) {
                 alert(`Failed to parse file: ${err instanceof Error ? err.message : 'Unknown error'}`);
               }
@@ -350,7 +350,7 @@ export default function App() {
 
         {hasData && (
           <button
-            onClick={() => { if (confirm('Clear all data?')) { clearProject(); setShowUploader(true); } }}
+            onClick={() => { if (confirm('Clear all data?')) { clearProject(); } }}
             className="px-4 py-2 text-sm rounded-full"
             style={{
               background: 'rgba(239, 68, 68, 0.1)',

@@ -119,7 +119,6 @@ function fitFontSize(
 function tryLayout(
   categories: LandscapeProject['categories'],
   branding: LandscapeProject['branding'],
-  legend: LandscapeProject['legend'],
   allTitles: string[],
   allValues: string[],
   numCols: number,
@@ -291,7 +290,7 @@ export function computeLayout(project: LandscapeProject): LayoutResult {
   // Try different column counts and target bucket widths
   for (let numCols = 1; numCols <= maxCols; numCols++) {
     for (let targetW = MAX_BUCKET_W; targetW >= MIN_BUCKET_W; targetW -= 20) {
-      const attempt = tryLayout(categories, branding, legend, allTitles, allValues, numCols, targetW);
+      const attempt = tryLayout(categories, branding, allTitles, allValues, numCols, targetW);
       if (!attempt) continue;
 
       if (!best || attempt.score > best.score) {
