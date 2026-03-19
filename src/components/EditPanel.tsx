@@ -9,7 +9,7 @@ interface EditPanelProps {
   onRemoveBucket: (categoryId: string, bucketId: string) => void;
   onUpdateCategory: (categoryId: string, name: string) => void;
   onRemoveCategory: (categoryId: string) => void;
-  onAddBucket: (categoryId: string, title: string, values: number[]) => void;
+  onAddBucket: (categoryId: string, title: string, values: (string | number)[]) => void;
   onAddCategory: (name: string) => void;
   onClose: () => void;
   onSetTitle: (title: string) => void;
@@ -32,7 +32,7 @@ export function EditPanel({
 }: EditPanelProps) {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newBucketTitle, setNewBucketTitle] = useState('');
-  const [newBucketValues, setNewBucketValues] = useState<string[]>(['0', '0']);
+  const [newBucketValues, setNewBucketValues] = useState<string[]>(['XX', 'YY']);
 
   const editCategory = editingCategory
     ? project.categories.find(c => c.id === editingCategory)
@@ -62,15 +62,16 @@ export function EditPanel({
   }, [editCategory, editingCategory]);
 
   useEffect(() => {
+    const defaults = ['XX', 'YY', 'ZZ'];
     const valCount = project.legend.format === '3-value' ? 3 : 2;
-    setNewBucketValues(Array(valCount).fill('0'));
+    setNewBucketValues(defaults.slice(0, valCount));
   }, [project.legend.format]);
 
   const saveBucket = () => {
     if (editingBucket && editCategory) {
       onUpdateBucket(editingBucket.categoryId, editingBucket.bucketId, {
         title: bucketTitle,
-        values: bucketValues.map(Number),
+        values: bucketValues.map(v => { const n = Number(v); return isNaN(n) ? v : n; }),
       });
     }
   };
@@ -127,10 +128,10 @@ export function EditPanel({
             <div key={i}>
               <label className="block text-xs font-semibold uppercase mb-1.5 tracking-wider" style={{ color: 'var(--text-secondary)' }}>{label}</label>
               <input
-                type="number"
+                type="text"
                 className="w-full rounded-lg px-3 py-2 text-sm mb-3"
                 style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}
-                value={bucketValues[i] || '0'}
+                value={bucketValues[i] || ''}
                 onChange={e => {
                   const updated = [...bucketValues];
                   updated[i] = e.target.value;
@@ -192,10 +193,10 @@ export function EditPanel({
             <div key={i}>
               <label className="block text-xs mb-1.5 tracking-wider" style={{ color: 'var(--text-secondary)' }}>{label}</label>
               <input
-                type="number"
+                type="text"
                 className="w-full rounded-lg px-3 py-2 text-sm mb-3"
                 style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}
-                value={newBucketValues[i] || '0'}
+                value={newBucketValues[i] || ''}
                 onChange={e => {
                   const updated = [...newBucketValues];
                   updated[i] = e.target.value;
@@ -207,9 +208,9 @@ export function EditPanel({
           <button
             onClick={() => {
               if (newBucketTitle.trim()) {
-                onAddBucket(editCategory.id, newBucketTitle.trim(), newBucketValues.map(Number));
+                onAddBucket(editCategory.id, newBucketTitle.trim(), newBucketValues.map(v => { const n = Number(v); return isNaN(n) ? v : n; }));
                 setNewBucketTitle('');
-                setNewBucketValues(Array(project.legend.labels.length).fill('0'));
+                setNewBucketValues(['XX', 'YY', 'ZZ'].slice(0, project.legend.labels.length));
               }
             }}
             className="btn-accent px-4 py-1.5 rounded-full text-sm"

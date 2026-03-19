@@ -26,6 +26,7 @@ export function BucketCard({ bucket, legend, branding, onClick, width, height, t
         width,
         height,
         backgroundColor: branding.secondaryColor,
+        opacity: (branding.bucketOpacity ?? 100) / 100,
         color: branding.textColor,
         fontFamily: branding.fontFamily,
         borderRadius: 4,
@@ -49,7 +50,12 @@ export function BucketCard({ bucket, legend, branding, onClick, width, height, t
           marginBottom: 2,
           maxWidth: '100%',
           overflow: 'hidden',
+          overflowWrap: 'break-word',
           wordBreak: 'break-word',
+          hyphens: 'auto' as const,
+          display: '-webkit-box',
+          WebkitBoxOrient: 'vertical' as const,
+          WebkitLineClamp: Math.max(1, Math.floor((height * 0.55) / (titleFontSize * 1.2))),
         }}
       >
         {bucket.title}

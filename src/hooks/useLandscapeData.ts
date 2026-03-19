@@ -1,10 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import type { LandscapeProject, Category, Bucket, BrandingConfig, LegendConfig } from '../types';
+import type { LandscapeProject, Category, Bucket, BrandingConfig, LegendConfig, CategoryLayoutOverride } from '../types';
 import { DEFAULT_BRANDING, DEFAULT_LEGEND } from '../types';
 import { saveWithPicker } from '../utils/exportUtils';
 
 const STORAGE_KEY = 'iplandscape_project';
+const MAX_UNDO_HISTORY = 50;
 
 function createEmptyProject(): LandscapeProject {
   return {
@@ -29,22 +30,54 @@ export function useLandscapeData() {
     () => loadFromStorage() || createEmptyProject()
   );
 
+  // Undo history stack
+  const undoStack = useRef<LandscapeProject[]>([]);
+  const isUndoing = useRef(false);
+
   const saveToStorage = useCallback((p: LandscapeProject) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
   }, []);
 
+  const pushUndo = useCallback((current: LandscapeProject) => {
+    if (isUndoing.current) return;
+    undoStack.current = [...undoStack.current.slice(-MAX_UNDO_HISTORY + 1), current];
+  }, []);
+
   const updateProject = useCallback((updater: (prev: LandscapeProject) => LandscapeProject) => {
     setProject(prev => {
+      pushUndo(prev);
       const next = updater(prev);
       saveToStorage(next);
       return next;
     });
+  }, [saveToStorage, pushUndo]);
+
+  const undo = useCallback(() => {
+    if (undoStack.current.length === 0) return;
+    isUndoing.current = true;
+    const previous = undoStack.current.pop()!;
+    setProject(previous);
+    saveToStorage(previous);
+    isUndoing.current = false;
   }, [saveToStorage]);
 
+  // Listen for Ctrl+Z / Cmd+Z
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [undo]);
+
   const loadProject = useCallback((p: LandscapeProject) => {
+    pushUndo(project);
     setProject(p);
     saveToStorage(p);
-  }, [saveToStorage]);
+  }, [saveToStorage, pushUndo, project]);
 
   const setTitle = useCallback((title: string) => {
     updateProject(p => ({ ...p, title }));
@@ -71,7 +104,7 @@ export function useLandscapeData() {
 
   const addCategory = useCallback((name: string) => {
     const newCat: Category = { id: uuidv4(), name, buckets: [] };
-    updateProject(p => ({ ...p, categories: [...p.categories, newCat] }));
+    updateProject(p => ({ ...p, categories: [...p.categories, newCat], layoutOverrides: undefined }));
   }, [updateProject]);
 
   const updateCategory = useCallback((categoryId: string, name: string) => {
@@ -87,13 +120,15 @@ export function useLandscapeData() {
     updateProject(p => ({
       ...p,
       categories: p.categories.filter(c => c.id !== categoryId),
+      layoutOverrides: undefined, // clear all overrides so layout recomputes cleanly
     }));
   }, [updateProject]);
 
-  const addBucket = useCallback((categoryId: string, title: string, values: number[]) => {
+  const addBucket = useCallback((categoryId: string, title: string, values: (string | number)[]) => {
     const newBucket: Bucket = { id: uuidv4(), title, values };
     updateProject(p => ({
       ...p,
+      layoutOverrides: undefined,
       categories: p.categories.map(c =>
         c.id === categoryId
           ? { ...c, buckets: [...c.buckets, newBucket] }
@@ -126,6 +161,7 @@ export function useLandscapeData() {
           ? { ...c, buckets: c.buckets.filter(b => b.id !== bucketId) }
           : c
       ),
+      layoutOverrides: undefined, // clear overrides so layout recomputes cleanly
     }));
   }, [updateProject]);
 
@@ -139,10 +175,11 @@ export function useLandscapeData() {
   }, [updateProject]);
 
   const clearProject = useCallback(() => {
+    pushUndo(project);
     const empty = createEmptyProject();
     setProject(empty);
     saveToStorage(empty);
-  }, [saveToStorage]);
+  }, [saveToStorage, pushUndo, project]);
 
   const exportProjectJson = useCallback(async () => {
     const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' });
@@ -158,6 +195,23 @@ export function useLandscapeData() {
       throw new Error('Invalid project file');
     }
   }, [loadProject]);
+
+  const updateLayoutOverride = useCallback((categoryId: string, override: CategoryLayoutOverride) => {
+    updateProject(p => ({
+      ...p,
+      layoutOverrides: {
+        ...p.layoutOverrides,
+        [categoryId]: override,
+      },
+    }));
+  }, [updateProject]);
+
+  const resetLayoutOverrides = useCallback(() => {
+    updateProject(p => {
+      const { layoutOverrides: _, ...rest } = p;
+      return rest as LandscapeProject;
+    });
+  }, [updateProject]);
 
   return {
     project,
@@ -177,5 +231,9 @@ export function useLandscapeData() {
     clearProject,
     exportProjectJson,
     importProjectJson,
+    updateLayoutOverride,
+    resetLayoutOverrides,
+    undo,
+    canUndo: undoStack.current.length > 0,
   };
 }

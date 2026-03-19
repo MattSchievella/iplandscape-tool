@@ -68,7 +68,7 @@ export function parseExcelFile(data: ArrayBuffer): ParseResult {
     }
   }
 
-  // Use the first row of the Data sheet as the project title, second row as subtitle/client name
+  // Use the first row of the Data sheet as the project title, second row as subtitle
   if (headerRowIndex > 0) {
     const firstRow = rows[0];
     if (firstRow && firstRow.length >= 1) {
@@ -173,7 +173,6 @@ export function generateTemplateWorkbook(): XLSX.WorkBook {
   // Data sheet with title and example data
   const dataRows: (string | number)[][] = [
     ['ipLandscape Template'],
-    ['Client Name'],
     [],
     ['Category', 'Bucket', 'Patents', 'Applications', 'Inactive'],
     ['COOLING METHOD', 'SINGLE PHASE', 258, 87, 12],
@@ -197,10 +196,9 @@ export function generateTemplateWorkbook(): XLSX.WorkBook {
     { wch: 12 },  // Inactive
   ];
 
-  // Merge title and client name rows across all columns
+  // Merge title row across all columns
   dataSheet['!merges'] = [
     { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: 4 } },
   ];
 
   XLSX.utils.book_append_sheet(wb, dataSheet, 'Data');
@@ -208,7 +206,7 @@ export function generateTemplateWorkbook(): XLSX.WorkBook {
   // Config sheet
   const configRows = [
     ['Title', 'Data Center Cooling ipLandscape'],
-    ['Subtitle', 'Client Name'],
+    ['Subtitle', ''],
     ['Primary Color', '#003087'],
     ['Secondary Color', '#004aad'],
     ['Accent Color', '#ffd700'],

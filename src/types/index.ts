@@ -1,9 +1,16 @@
+export interface CategoryLayoutOverride {
+  x: number;
+  y: number;
+  scale: number; // uniform scale factor (1.0 = original size, aspect ratio locked)
+}
+
 export interface LandscapeProject {
   title: string;
   subtitle?: string;
   legend: LegendConfig;
   categories: Category[];
   branding: BrandingConfig;
+  layoutOverrides?: Record<string, CategoryLayoutOverride>;
 }
 
 export interface Category {
@@ -15,7 +22,7 @@ export interface Category {
 export interface Bucket {
   id: string;
   title: string;
-  values: number[];
+  values: (string | number)[];
 }
 
 export interface LegendConfig {
@@ -33,9 +40,14 @@ export interface BrandingConfig {
   backgroundColor: string;
   logo?: string;
   logoScale?: number;
+  logoOffsetX?: number;
   logoOffsetY?: number;
   fontFamily: string;
   backgroundImage?: string;
+  titleFontAdjust?: number;  // offset applied to auto-computed title font size
+  valueFontAdjust?: number;  // offset applied to auto-computed value font size
+  categoryOpacity?: number;  // 0-100, opacity for category (full) cards
+  bucketOpacity?: number;    // 0-100, opacity for bucket cards
 }
 
 export const DEFAULT_BRANDING: BrandingConfig = {

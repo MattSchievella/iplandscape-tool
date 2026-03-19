@@ -28,6 +28,8 @@ export default function App() {
     clearProject,
     exportProjectJson,
     importProjectJson,
+    updateLayoutOverride,
+    resetLayoutOverrides,
   } = useLandscapeData();
 
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -207,7 +209,7 @@ export default function App() {
           onClick={() => { setSidePanel(sidePanel === 'branding' ? 'none' : 'branding'); }}
           className={`px-4 py-2 text-sm rounded-full ${sidePanel === 'branding' ? 'btn-ghost-active' : 'btn-ghost'}`}
         >
-          Branding
+          Edit Design
         </button>
 
         <div className="h-5 mx-1" style={{ borderLeft: '1px solid var(--border-subtle)' }} />
@@ -231,9 +233,6 @@ export default function App() {
               }}
             >
               <button onClick={() => handleExport('png')} className="block w-full text-left px-4 py-2.5 text-sm hover:bg-white/5" style={{ color: 'var(--text-primary)' }}>Export PNG</button>
-              <button onClick={() => handleExport('jpeg')} className="block w-full text-left px-4 py-2.5 text-sm hover:bg-white/5" style={{ color: 'var(--text-primary)' }}>Export JPEG</button>
-              <button onClick={() => handleExport('svg')} className="block w-full text-left px-4 py-2.5 text-sm hover:bg-white/5" style={{ color: 'var(--text-primary)' }}>Export SVG</button>
-              <button onClick={() => handleExport('pdf')} className="block w-full text-left px-4 py-2.5 text-sm hover:bg-white/5" style={{ color: 'var(--text-primary)' }}>Export PDF</button>
             </div>
           )}
         </div>
@@ -340,6 +339,15 @@ export default function App() {
 
         <div className="h-5 mx-1" style={{ borderLeft: '1px solid var(--border-subtle)' }} />
 
+        {project.layoutOverrides && Object.keys(project.layoutOverrides).length > 0 && (
+          <button
+            onClick={resetLayoutOverrides}
+            className="btn-ghost px-4 py-2 text-sm rounded-full"
+          >
+            Reset Layout
+          </button>
+        )}
+
         {hasData && (
           <button
             onClick={() => { if (confirm('Clear all data?')) { clearProject(); setShowUploader(true); } }}
@@ -364,26 +372,6 @@ export default function App() {
           className="flex-1 overflow-hidden grid-pattern"
           style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 16 }}
         >
-          {showUploader && (
-            <div className="max-w-xl w-full mb-4" style={{ zIndex: 10 }}>
-              <ExcelUploader
-                onProjectLoaded={(p) => {
-                  loadProject(p);
-                  setShowUploader(false);
-                }}
-              />
-              {hasData && (
-                <button
-                  onClick={() => setShowUploader(false)}
-                  className="mt-3 text-sm cursor-pointer"
-                  style={{ color: 'var(--text-muted)' }}
-                >
-                  Cancel - go back to chart
-                </button>
-              )}
-            </div>
-          )}
-
           <div
             style={{
               transform: `scale(${scale})`,
@@ -394,8 +382,10 @@ export default function App() {
             <LandscapeCanvas
               ref={canvasRef}
               project={project}
+              canvasScale={scale}
               onEditBucket={handleEditBucket}
               onEditCategory={handleEditCategory}
+              onUpdateLayoutOverride={updateLayoutOverride}
             />
           </div>
         </div>

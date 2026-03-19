@@ -218,13 +218,68 @@ export function BrandingPanel({ branding, legend, onUpdateBranding, onSetLegend,
         <ColorField label="Text Color" value={branding.textColor} onChange={v => onUpdateBranding('textColor', v)} />
         <ColorField label="Value Color (XX:YY)" value={branding.valueColor || branding.textColor} onChange={v => onUpdateBranding('valueColor', v)} />
         <ColorField label="Background" value={branding.backgroundColor} onChange={v => onUpdateBranding('backgroundColor', v)} />
+
+        {/* Opacity sliders */}
+        <div className="mt-4">
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+              Category Card Opacity: {branding.categoryOpacity ?? 100}%
+            </label>
+            {(branding.categoryOpacity ?? 100) !== 100 && (
+              <button
+                onClick={() => onUpdateBranding('categoryOpacity', 100)}
+                className="text-[10px] cursor-pointer px-1.5 py-0.5 rounded"
+                style={{ color: 'var(--accent-cyan)', background: 'rgba(0,200,255,0.1)' }}
+              >
+                Reset
+              </button>
+            )}
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            value={branding.categoryOpacity ?? 100}
+            onChange={e => onUpdateBranding('categoryOpacity', Number(e.target.value))}
+            className="w-full"
+            style={{ accentColor: 'var(--accent-cyan)' }}
+          />
+        </div>
+
+        <div className="mt-3">
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+              Bucket Card Opacity: {branding.bucketOpacity ?? 100}%
+            </label>
+            {(branding.bucketOpacity ?? 100) !== 100 && (
+              <button
+                onClick={() => onUpdateBranding('bucketOpacity', 100)}
+                className="text-[10px] cursor-pointer px-1.5 py-0.5 rounded"
+                style={{ color: 'var(--accent-cyan)', background: 'rgba(0,200,255,0.1)' }}
+              >
+                Reset
+              </button>
+            )}
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            value={branding.bucketOpacity ?? 100}
+            onChange={e => onUpdateBranding('bucketOpacity', Number(e.target.value))}
+            className="w-full"
+            style={{ accentColor: 'var(--accent-cyan)' }}
+          />
+        </div>
       </div>
 
       {/* Font */}
       <div className="pb-5" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
         <h3 className="text-sm font-bold mb-3" style={{ color: 'var(--accent-cyan)' }}>Font</h3>
         <select
-          className="w-full rounded-lg px-3 py-2 text-sm"
+          className="w-full rounded-lg px-3 py-2 text-sm mb-4"
           style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)' }}
           value={branding.fontFamily}
           onChange={e => onUpdateBranding('fontFamily', e.target.value)}
@@ -235,6 +290,60 @@ export function BrandingPanel({ branding, legend, onUpdateBranding, onSetLegend,
             </option>
           ))}
         </select>
+
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+              Bucket Title Size: {(branding.titleFontAdjust ?? 0) >= 0 ? '+' : ''}{branding.titleFontAdjust ?? 0}px
+            </label>
+            {(branding.titleFontAdjust ?? 0) !== 0 && (
+              <button
+                onClick={() => onUpdateBranding('titleFontAdjust', 0)}
+                className="text-[10px] cursor-pointer px-1.5 py-0.5 rounded"
+                style={{ color: 'var(--accent-cyan)', background: 'rgba(0,200,255,0.1)' }}
+              >
+                Reset
+              </button>
+            )}
+          </div>
+          <input
+            type="range"
+            min={-10}
+            max={20}
+            step={1}
+            value={branding.titleFontAdjust ?? 0}
+            onChange={e => onUpdateBranding('titleFontAdjust', Number(e.target.value))}
+            className="w-full"
+            style={{ accentColor: 'var(--accent-cyan)' }}
+          />
+        </div>
+
+        <div className="mb-1">
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+              Bucket Value Size: {(branding.valueFontAdjust ?? 0) >= 0 ? '+' : ''}{branding.valueFontAdjust ?? 0}px
+            </label>
+            {(branding.valueFontAdjust ?? 0) !== 0 && (
+              <button
+                onClick={() => onUpdateBranding('valueFontAdjust', 0)}
+                className="text-[10px] cursor-pointer px-1.5 py-0.5 rounded"
+                style={{ color: 'var(--accent-cyan)', background: 'rgba(0,200,255,0.1)' }}
+              >
+                Reset
+              </button>
+            )}
+          </div>
+          <input
+            type="range"
+            min={-10}
+            max={20}
+            step={1}
+            value={branding.valueFontAdjust ?? 0}
+            onChange={e => onUpdateBranding('valueFontAdjust', Number(e.target.value))}
+            className="w-full"
+            style={{ accentColor: 'var(--accent-cyan)' }}
+          />
+        </div>
       </div>
 
       {/* Logo */}
@@ -262,6 +371,20 @@ export function BrandingPanel({ branding, legend, onUpdateBranding, onSetLegend,
                 max={150}
                 value={branding.logoScale ?? 100}
                 onChange={e => onUpdateBranding('logoScale', Number(e.target.value))}
+                className="w-full"
+                style={{ accentColor: 'var(--accent-cyan)' }}
+              />
+            </div>
+            <div className="mb-3">
+              <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                X Position: {branding.logoOffsetX ?? 0}px
+              </label>
+              <input
+                type="range"
+                min={-50}
+                max={50}
+                value={branding.logoOffsetX ?? 0}
+                onChange={e => onUpdateBranding('logoOffsetX', Number(e.target.value))}
                 className="w-full"
                 style={{ accentColor: 'var(--accent-cyan)' }}
               />
