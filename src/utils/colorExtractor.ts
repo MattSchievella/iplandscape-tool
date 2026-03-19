@@ -183,30 +183,67 @@ export async function extractColorsFromUrl(url: string): Promise<string[]> {
     normalizedUrl = 'https://' + normalizedUrl;
   }
 
-  // Fetch via CORS proxy
-  const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(normalizedUrl)}`;
+  const encodedUrl = encodeURIComponent(normalizedUrl);
 
-  const response = await fetch(proxyUrl, {
-    signal: AbortSignal.timeout(15000),
-  });
+  // Multiple CORS proxy fallbacks for reliability
+  const proxies = [
+    `https://api.allorigins.win/raw?url=${encodedUrl}`,
+    `https://corsproxy.io/?${encodedUrl}`,
+    `https://api.codetabs.com/v1/proxy?quest=${normalizedUrl}`,
+    `https://cors-anywhere.herokuapp.com/${normalizedUrl}`,
+  ];
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch website (${response.status})`);
+  let lastError: Error | null = null;
+
+  for (const proxyUrl of proxies) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+      const response = await fetch(proxyUrl, {
+        signal: controller.signal,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        lastError = new Error(`Proxy returned ${response.status}`);
+        continue;
+      }
+
+      const html = await response.text();
+
+      if (!html || html.length < 100) {
+        lastError = new Error('Response too short');
+        continue;
+      }
+
+      const colors = extractColorsFromHtml(html);
+
+      if (colors.length === 0) {
+        throw new Error('No brand colors found on this website');
+      }
+
+      return colors;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      // If it's a "no brand colors" error, don't try other proxies — the HTML was valid
+      if (lastError.message === 'No brand colors found on this website') {
+        throw lastError;
+      }
+      // Otherwise try next proxy
+      continue;
+    }
   }
 
-  const html = await response.text();
-
-  if (!html || html.length < 100) {
-    throw new Error('Could not retrieve website content');
-  }
-
-  const colors = extractColorsFromHtml(html);
-
-  if (colors.length === 0) {
-    throw new Error('No brand colors found on this website');
-  }
-
-  return colors;
+  throw new Error(
+    lastError?.message === 'No brand colors found on this website'
+      ? lastError.message
+      : 'Could not fetch website. All proxy services timed out. Please try again later.'
+  );
 }
 
 /**
