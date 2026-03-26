@@ -29,6 +29,7 @@ export default function App() {
     exportProjectJson,
     importProjectJson,
     updateLayoutOverride,
+    updateLegendOverride,
     resetLayoutOverrides,
   } = useLandscapeData();
 
@@ -339,7 +340,7 @@ export default function App() {
 
         <div className="h-5 mx-1" style={{ borderLeft: '1px solid var(--border-subtle)' }} />
 
-        {project.layoutOverrides && Object.keys(project.layoutOverrides).length > 0 && (
+        {((project.layoutOverrides && Object.keys(project.layoutOverrides).length > 0) || project.legendOverride) && (
           <button
             onClick={resetLayoutOverrides}
             className="btn-ghost px-4 py-2 text-sm rounded-full"
@@ -386,6 +387,7 @@ export default function App() {
               onEditBucket={handleEditBucket}
               onEditCategory={handleEditCategory}
               onUpdateLayoutOverride={updateLayoutOverride}
+              onUpdateLegendOverride={updateLegendOverride}
             />
           </div>
         </div>

@@ -4,6 +4,11 @@ export interface CategoryLayoutOverride {
   scale: number; // uniform scale factor (1.0 = original size, aspect ratio locked)
 }
 
+export interface LegendLayoutOverride {
+  x: number;
+  y: number;
+}
+
 export interface LandscapeProject {
   title: string;
   subtitle?: string;
@@ -11,6 +16,7 @@ export interface LandscapeProject {
   categories: Category[];
   branding: BrandingConfig;
   layoutOverrides?: Record<string, CategoryLayoutOverride>;
+  legendOverride?: LegendLayoutOverride;
 }
 
 export interface Category {
@@ -48,6 +54,12 @@ export interface BrandingConfig {
   valueFontAdjust?: number;  // offset applied to auto-computed value font size
   categoryOpacity?: number;  // 0-100, opacity for category (full) cards
   bucketOpacity?: number;    // 0-100, opacity for bucket cards
+  legendOpacity?: number;    // 0-100, opacity for legend card
+  legendLogo?: string;       // data URL for logo displayed in legend card
+  legendLogoScale?: number;  // 20-200, percentage scale for legend logo
+  legendCardColor?: string;  // custom background color for legend card
+  legendTitleColor?: string;  // color for "LEGEND" title text
+  legendLabelColor?: string;  // color for legend label text (e.g. "Patents : Applications")
 }
 
 export const DEFAULT_BRANDING: BrandingConfig = {

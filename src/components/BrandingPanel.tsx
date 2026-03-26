@@ -273,6 +273,7 @@ export function BrandingPanel({ branding, legend, onUpdateBranding, onSetLegend,
             style={{ accentColor: 'var(--accent-cyan)' }}
           />
         </div>
+
       </div>
 
       {/* Font */}
@@ -441,6 +442,115 @@ export function BrandingPanel({ branding, legend, onUpdateBranding, onSetLegend,
       {/* Legend Config */}
       <div>
         <h3 className="text-sm font-bold mb-3" style={{ color: 'var(--accent-cyan)' }}>Legend</h3>
+
+        {/* Legend Card Color */}
+        <ColorField
+          label="Legend Card Color"
+          value={branding.legendCardColor || branding.primaryColor}
+          onChange={v => onUpdateBranding('legendCardColor', v)}
+        />
+
+        {/* Legend Text Colors */}
+        <ColorField
+          label="Legend Title Color"
+          value={branding.legendTitleColor || branding.accentColor}
+          onChange={v => onUpdateBranding('legendTitleColor', v)}
+        />
+        <ColorField
+          label="Legend Label Color"
+          value={branding.legendLabelColor || branding.textColor}
+          onChange={v => onUpdateBranding('legendLabelColor', v)}
+        />
+
+        {/* Legend Card Opacity */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+              Legend Card Opacity: {branding.legendOpacity ?? 100}%
+            </label>
+            {(branding.legendOpacity ?? 100) !== 100 && (
+              <button
+                onClick={() => onUpdateBranding('legendOpacity', 100)}
+                className="text-[10px] cursor-pointer px-1.5 py-0.5 rounded"
+                style={{ color: 'var(--accent-cyan)', background: 'rgba(0,200,255,0.1)' }}
+              >
+                Reset
+              </button>
+            )}
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            value={branding.legendOpacity ?? 100}
+            onChange={e => onUpdateBranding('legendOpacity', Number(e.target.value))}
+            className="w-full"
+            style={{ accentColor: 'var(--accent-cyan)' }}
+          />
+        </div>
+
+        {/* Legend Logo */}
+        <div className="mb-4">
+          <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+            Legend Logo
+          </label>
+          {branding.legendLogo && (
+            <>
+              <div className="mb-2 relative p-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                <img src={branding.legendLogo} alt="Legend Logo" className="h-10 mx-auto object-contain block" />
+                <button
+                  onClick={() => onUpdateBranding('legendLogo', undefined)}
+                  className="absolute top-1 right-1 text-xs cursor-pointer"
+                  style={{ color: '#f87171' }}
+                >
+                  Remove
+                </button>
+              </div>
+              <div className="mb-2">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                    Logo Size: {branding.legendLogoScale ?? 100}%
+                  </label>
+                  {(branding.legendLogoScale ?? 100) !== 100 && (
+                    <button
+                      onClick={() => onUpdateBranding('legendLogoScale', 100)}
+                      className="text-[10px] cursor-pointer px-1.5 py-0.5 rounded"
+                      style={{ color: 'var(--accent-cyan)', background: 'rgba(0,200,255,0.1)' }}
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="range"
+                  min={20}
+                  max={200}
+                  step={1}
+                  value={branding.legendLogoScale ?? 100}
+                  onChange={e => onUpdateBranding('legendLogoScale', Number(e.target.value))}
+                  className="w-full"
+                  style={{ accentColor: 'var(--accent-cyan)' }}
+                />
+              </div>
+            </>
+          )}
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = () => {
+                onUpdateBranding('legendLogo', reader.result as string);
+              };
+              reader.readAsDataURL(file);
+            }}
+            className="text-sm"
+            style={{ color: 'var(--text-secondary)' }}
+          />
+        </div>
         <div className="flex items-center gap-2 mb-3">
           <label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Format:</label>
           <select

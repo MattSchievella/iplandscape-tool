@@ -1,5 +1,5 @@
 import React, { forwardRef, useMemo, useState, useEffect, useCallback } from 'react';
-import type { LandscapeProject, CategoryLayoutOverride } from '../types';
+import type { LandscapeProject, CategoryLayoutOverride, LegendLayoutOverride } from '../types';
 import { CategoryBlock } from './CategoryBlock';
 import { computeLayout } from '../utils/layoutEngine';
 
@@ -11,6 +11,7 @@ interface LandscapeCanvasProps {
   onEditBucket: (categoryId: string, bucketId: string) => void;
   onEditCategory: (categoryId: string) => void;
   onUpdateLayoutOverride: (categoryId: string, override: CategoryLayoutOverride) => void;
+  onUpdateLegendOverride: (override: LegendLayoutOverride) => void;
 }
 
 interface DragState {
@@ -30,8 +31,15 @@ interface ResizeState {
   baseHeight: number;
 }
 
+interface LegendDragState {
+  startPointerX: number;
+  startPointerY: number;
+  origX: number;
+  origY: number;
+}
+
 export const LandscapeCanvas = forwardRef<HTMLDivElement, LandscapeCanvasProps>(
-  function LandscapeCanvas({ project, canvasScale, onEditBucket, onEditCategory, onUpdateLayoutOverride }, ref) {
+  function LandscapeCanvas({ project, canvasScale, onEditBucket, onEditCategory, onUpdateLayoutOverride, onUpdateLegendOverride }, ref) {
     const { branding, legend, categories } = project;
 
     const layout = useMemo(() => computeLayout(project), [project]);
@@ -44,6 +52,8 @@ export const LandscapeCanvas = forwardRef<HTMLDivElement, LandscapeCanvasProps>(
     const [tempOverrides, setTempOverrides] = useState<Record<string, { x: number; y: number; scale: number }>>({});
     const [dragState, setDragState] = useState<DragState | null>(null);
     const [resizeState, setResizeState] = useState<ResizeState | null>(null);
+    const [legendDragState, setLegendDragState] = useState<LegendDragState | null>(null);
+    const [tempLegendPos, setTempLegendPos] = useState<{ x: number; y: number } | null>(null);
 
     // Compute effective layout: base layout + persisted overrides + temp overrides
     const getEffective = useCallback((catId: string, baseX: number, baseY: number) => {
@@ -181,6 +191,50 @@ export const LandscapeCanvas = forwardRef<HTMLDivElement, LandscapeCanvasProps>(
       };
     }, [resizeState, canvasScale, layout.categories, project.layoutOverrides, onUpdateLayoutOverride]);
 
+    // --- LEGEND DRAG HANDLERS ---
+    const defaultLegendX = layout.canvasWidth - PADDING - 300;
+    const defaultLegendY = layout.canvasHeight - PADDING - 60;
+
+    const handleLegendDragStart = useCallback((e: React.PointerEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const pos = tempLegendPos ?? project.legendOverride ?? { x: defaultLegendX, y: defaultLegendY };
+      setLegendDragState({
+        startPointerX: e.clientX,
+        startPointerY: e.clientY,
+        origX: pos.x,
+        origY: pos.y,
+      });
+    }, [tempLegendPos, project.legendOverride, defaultLegendX, defaultLegendY]);
+
+    useEffect(() => {
+      if (!legendDragState) return;
+
+      const handleMove = (e: PointerEvent) => {
+        const dx = (e.clientX - legendDragState.startPointerX) / canvasScale;
+        const dy = (e.clientY - legendDragState.startPointerY) / canvasScale;
+        setTempLegendPos({ x: legendDragState.origX + dx, y: legendDragState.origY + dy });
+      };
+
+      const handleUp = (e: PointerEvent) => {
+        const dx = (e.clientX - legendDragState.startPointerX) / canvasScale;
+        const dy = (e.clientY - legendDragState.startPointerY) / canvasScale;
+        onUpdateLegendOverride({ x: legendDragState.origX + dx, y: legendDragState.origY + dy });
+        setTempLegendPos(null);
+        setLegendDragState(null);
+      };
+
+      document.addEventListener('pointermove', handleMove);
+      document.addEventListener('pointerup', handleUp);
+      return () => {
+        document.removeEventListener('pointermove', handleMove);
+        document.removeEventListener('pointerup', handleUp);
+      };
+    }, [legendDragState, canvasScale, onUpdateLegendOverride]);
+
+    const legendPos = tempLegendPos ?? project.legendOverride ?? { x: defaultLegendX, y: defaultLegendY };
+    const legendOpacity = (branding.legendOpacity ?? 100) / 100;
+
     return (
       <div
         ref={ref}
@@ -293,45 +347,63 @@ export const LandscapeCanvas = forwardRef<HTMLDivElement, LandscapeCanvasProps>(
           })
         )}
 
-        {/* Legend - fixed bottom right */}
+        {/* Legend - draggable, independent card */}
         <div
+          onPointerDown={handleLegendDragStart}
           style={{
             position: 'absolute',
-            right: PADDING,
-            bottom: PADDING,
-            display: 'flex',
-            alignItems: 'center',
+            left: legendPos.x,
+            top: legendPos.y,
+            opacity: legendOpacity,
+            cursor: legendDragState ? 'grabbing' : 'grab',
+            userSelect: 'none',
           }}
         >
           <div
             style={{
-              backgroundColor: `${branding.primaryColor}cc`,
+              backgroundColor: branding.legendCardColor
+                ? `${branding.legendCardColor}cc`
+                : `${branding.primaryColor}cc`,
               padding: '8px 24px',
               borderRadius: 7,
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              gap: 12,
+              gap: 6,
             }}
           >
-            <span
-              style={{
-                fontSize: 15,
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                color: branding.accentColor,
-              }}
-            >
-              LEGEND
-            </span>
-            <span style={{ fontSize: 17, fontWeight: 700 }}>
-              {legend.labels.map((label, i) => (
-                <span key={i}>
-                  {i > 0 && ' : '}
-                  {label}
-                </span>
-              ))}
-            </span>
+            {branding.legendLogo && (
+              <img
+                src={branding.legendLogo}
+                alt="Legend Logo"
+                style={{
+                  height: 36 * (branding.legendLogoScale ?? 100) / 100,
+                  maxWidth: 200,
+                  objectFit: 'contain',
+                }}
+              />
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span
+                style={{
+                  fontSize: 15,
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  color: branding.legendTitleColor || branding.accentColor,
+                }}
+              >
+                LEGEND
+              </span>
+              <span style={{ fontSize: 17, fontWeight: 700, color: branding.legendLabelColor || branding.textColor }}>
+                {legend.labels.map((label, i) => (
+                  <span key={i}>
+                    {i > 0 && ' : '}
+                    {label}
+                  </span>
+                ))}
+              </span>
+            </div>
           </div>
         </div>
       </div>

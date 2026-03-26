@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import type { LandscapeProject, Category, Bucket, BrandingConfig, LegendConfig, CategoryLayoutOverride } from '../types';
+import type { LandscapeProject, Category, Bucket, BrandingConfig, LegendConfig, CategoryLayoutOverride, LegendLayoutOverride } from '../types';
 import { DEFAULT_BRANDING, DEFAULT_LEGEND } from '../types';
 import { saveWithPicker } from '../utils/exportUtils';
 
@@ -206,9 +206,16 @@ export function useLandscapeData() {
     }));
   }, [updateProject]);
 
+  const updateLegendOverride = useCallback((override: LegendLayoutOverride) => {
+    updateProject(p => ({
+      ...p,
+      legendOverride: override,
+    }));
+  }, [updateProject]);
+
   const resetLayoutOverrides = useCallback(() => {
     updateProject(p => {
-      const { layoutOverrides: _, ...rest } = p;
+      const { layoutOverrides: _, legendOverride: _lo, ...rest } = p;
       return rest as LandscapeProject;
     });
   }, [updateProject]);
@@ -232,6 +239,7 @@ export function useLandscapeData() {
     exportProjectJson,
     importProjectJson,
     updateLayoutOverride,
+    updateLegendOverride,
     resetLayoutOverrides,
     undo,
     canUndo: undoStack.current.length > 0,
