@@ -177,7 +177,24 @@ export default function App() {
                   alert(result.errors.join('\n'));
                   return;
                 }
-                loadProject(result.project);
+                // If there's an existing project with design customizations,
+                // preserve branding, legend config, logos, and layout overrides
+                // and only update the data (categories, title, subtitle).
+                const hasExistingDesign = project.categories.length > 0;
+                if (hasExistingDesign) {
+                  const merged: typeof project = {
+                    ...project,
+                    title: result.project.title,
+                    subtitle: result.project.subtitle,
+                    categories: result.project.categories,
+                    // Clear layout overrides since card count/structure may have changed
+                    layoutOverrides: undefined,
+                    legendOverride: project.legendOverride,
+                  };
+                  loadProject(merged);
+                } else {
+                  loadProject(result.project);
+                }
                 
               } catch (err) {
                 alert(`Failed to parse file: ${err instanceof Error ? err.message : 'Unknown error'}`);
