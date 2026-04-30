@@ -6,7 +6,7 @@ import { LandscapeCanvas } from './LandscapeCanvas';
 import { EditPanel } from './EditPanel';
 import { BrandingPanel } from './BrandingPanel';
 import { exportToPng, exportToSvg, exportToPdf, saveWithPicker } from '../utils/exportUtils';
-import { generateTemplateWorkbook } from '../utils/excelParser';
+import { generateTemplateWorkbook, generateCsvFromProject } from '../utils/excelParser';
 import { DEFAULT_STYLIZE_PROMPT, ENV_GEMINI_API_KEY, captureCanvasAsBase64, stylizeImage } from '../utils/stylizeApi';
 
 type SidePanel = 'none' | 'edit' | 'branding';
@@ -78,6 +78,13 @@ export default function App() {
   const downloadTemplate = () => {
     const wb = generateTemplateWorkbook();
     XLSX.writeFile(wb, 'iplandscape_template.xlsx');
+  };
+
+  const handleExportCsv = async () => {
+    const csv = generateCsvFromProject(project);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const filename = (project.title || 'iplandscape').replace(/\s+/g, '_').toLowerCase() + '.csv';
+    await saveWithPicker(blob, filename, 'CSV File', { 'text/csv': ['.csv'] });
   };
 
   const handleImportJson = () => {
@@ -166,7 +173,7 @@ export default function App() {
           onClick={() => {
             const input = document.createElement('input');
             input.type = 'file';
-            input.accept = '.xlsx,.xls';
+            input.accept = '.xlsx,.xls,.csv';
             input.onchange = async (e) => {
               const file = (e.target as HTMLInputElement).files?.[0];
               if (!file) return;
@@ -204,7 +211,7 @@ export default function App() {
           }}
           className="btn-accent px-4 py-2 text-sm rounded-full"
         >
-          Upload Excel
+          Upload Excel/CSV
         </button>
 
         <button
@@ -212,6 +219,15 @@ export default function App() {
           className="btn-ghost px-4 py-2 text-sm rounded-full"
         >
           Download Template
+        </button>
+
+        <button
+          onClick={handleExportCsv}
+          disabled={!hasData}
+          className="btn-ghost px-4 py-2 text-sm rounded-full disabled:opacity-40 disabled:cursor-not-allowed"
+          title="Export current data as CSV for batch editing and re-import"
+        >
+          Export CSV
         </button>
 
         <div className="h-5 mx-1" style={{ borderLeft: '1px solid var(--border-subtle)' }} />

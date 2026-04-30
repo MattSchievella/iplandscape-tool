@@ -167,6 +167,33 @@ function createEmptyProject(): LandscapeProject {
   };
 }
 
+export function generateCsvFromProject(project: LandscapeProject): string {
+  const labels = project.legend.labels;
+  const header = ['Category', 'Bucket', ...labels];
+  const escape = (cell: string | number): string => {
+    const s = String(cell ?? '');
+    if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
+      return `"${s.replace(/"/g, '""')}"`;
+    }
+    return s;
+  };
+  const lines: string[] = [];
+  lines.push(escape(project.title));
+  if (project.subtitle) lines.push(escape(project.subtitle));
+  lines.push('');
+  lines.push(header.map(escape).join(','));
+  for (const category of project.categories) {
+    for (const bucket of category.buckets) {
+      const row: (string | number)[] = [category.name, bucket.title];
+      for (let i = 0; i < labels.length; i++) {
+        row.push(bucket.values[i] ?? '');
+      }
+      lines.push(row.map(escape).join(','));
+    }
+  }
+  return lines.join('\r\n');
+}
+
 export function generateTemplateWorkbook(): XLSX.WorkBook {
   const wb = XLSX.utils.book_new();
 
