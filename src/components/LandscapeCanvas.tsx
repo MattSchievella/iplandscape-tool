@@ -12,6 +12,7 @@ interface LandscapeCanvasProps {
   onEditCategory: (categoryId: string) => void;
   onUpdateLayoutOverride: (categoryId: string, override: CategoryLayoutOverride) => void;
   onUpdateLegendOverride: (override: LegendLayoutOverride) => void;
+  onSetTitle: (title: string) => void;
 }
 
 interface DragState {
@@ -39,7 +40,7 @@ interface LegendDragState {
 }
 
 export const LandscapeCanvas = forwardRef<HTMLDivElement, LandscapeCanvasProps>(
-  function LandscapeCanvas({ project, canvasScale, onEditBucket, onEditCategory, onUpdateLayoutOverride, onUpdateLegendOverride }, ref) {
+  function LandscapeCanvas({ project, canvasScale, onEditBucket, onEditCategory, onUpdateLayoutOverride, onUpdateLegendOverride, onSetTitle }, ref) {
     const { branding, legend, categories } = project;
 
     const layout = useMemo(() => computeLayout(project), [project]);
@@ -54,6 +55,18 @@ export const LandscapeCanvas = forwardRef<HTMLDivElement, LandscapeCanvasProps>(
     const [resizeState, setResizeState] = useState<ResizeState | null>(null);
     const [legendDragState, setLegendDragState] = useState<LegendDragState | null>(null);
     const [tempLegendPos, setTempLegendPos] = useState<{ x: number; y: number } | null>(null);
+
+    // Inline title editing: null when not editing. Every exit goes through blur;
+    // Escape sets the cancel flag first so the draft is discarded.
+    const [titleDraft, setTitleDraft] = useState<string | null>(null);
+    const cancelTitleEdit = useRef(false);
+
+    const handleTitleBlur = () => {
+      const next = (titleDraft ?? '').trim();
+      if (!cancelTitleEdit.current && next && next !== project.title) onSetTitle(next);
+      cancelTitleEdit.current = false;
+      setTitleDraft(null);
+    };
 
     // Compute effective layout: base layout + persisted overrides + temp overrides
     const getEffective = useCallback((catId: string, baseX: number, baseY: number) => {
@@ -299,23 +312,64 @@ export const LandscapeCanvas = forwardRef<HTMLDivElement, LandscapeCanvasProps>(
             />
           )}
           <div>
-            <h1
-              style={{
-                fontSize: 28,
-                fontWeight: 800,
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-                margin: 0,
-                lineHeight: 1.2,
-                color: branding.titleColor || branding.textColor,
-              }}
-            >
-              {project.title.split(/(ipLandscape)/i).map((part, i) =>
-                /ipLandscape/i.test(part)
-                  ? <span key={i}>{part}<sup style={{ fontSize: '0.5em', verticalAlign: 'super' }}>™</sup></span>
-                  : part
-              )}
-            </h1>
+            {titleDraft !== null ? (
+              <input
+                autoFocus
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                onFocus={(e) => e.target.select()}
+                onBlur={handleTitleBlur}
+                onKeyDown={(e) => {
+                  // Keep global shortcuts (Ctrl+Z project undo) out of the text field
+                  e.stopPropagation();
+                  if (e.key === 'Enter') e.currentTarget.blur();
+                  if (e.key === 'Escape') {
+                    cancelTitleEdit.current = true;
+                    e.currentTarget.blur();
+                  }
+                }}
+                style={{
+                  fontSize: 28,
+                  fontWeight: 800,
+                  fontFamily: 'inherit',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  lineHeight: 1.2,
+                  color: branding.titleColor || branding.textColor,
+                  background: 'transparent',
+                  border: 'none',
+                  outline: '2px dashed currentColor',
+                  outlineOffset: 4,
+                  borderRadius: 2,
+                  padding: 0,
+                  margin: 0,
+                  width: `${Math.max(titleDraft.length, 10) * 0.8}em`,
+                  maxWidth: 1400,
+                }}
+              />
+            ) : (
+              <h1
+                onClick={() => setTitleDraft(project.title)}
+                title="Click to edit title"
+                className="rounded-sm hover:outline-2 hover:outline-dashed hover:outline-offset-4"
+                style={{
+                  fontSize: 28,
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  margin: 0,
+                  lineHeight: 1.2,
+                  color: branding.titleColor || branding.textColor,
+                  cursor: 'text',
+                }}
+              >
+                {project.title.split(/(ipLandscape)/i).map((part, i) =>
+                  /ipLandscape/i.test(part)
+                    ? <span key={i}>{part}<sup style={{ fontSize: '0.5em', verticalAlign: 'super' }}>™</sup></span>
+                    : part
+                )}
+              </h1>
+            )}
             {project.subtitle && (
               <p style={{ fontSize: 14, opacity: 0.8, margin: '2px 0 0 0' }}>{project.subtitle}</p>
             )}

@@ -433,6 +433,7 @@ export default function App() {
               onEditCategory={handleEditCategory}
               onUpdateLayoutOverride={updateLayoutOverride}
               onUpdateLegendOverride={updateLegendOverride}
+              onSetTitle={setTitle}
             />
           </div>
         </div>
