@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import type { LandscapeProject, Category, Bucket, BrandingConfig, LegendConfig, CategoryLayoutOverride, LegendLayoutOverride } from '../types';
+import type { LandscapeProject, Category, Bucket, BrandingConfig, LegendConfig, CategoryLayoutOverride, LegendLayoutOverride, LayoutMode } from '../types';
 import { DEFAULT_BRANDING, DEFAULT_LEGEND } from '../types';
 import { saveWithPicker } from '../utils/exportUtils';
 
@@ -220,6 +220,11 @@ export function useLandscapeData() {
     });
   }, [updateProject]);
 
+  // Switching layouts also drops dragged positions, which belong to the old layout
+  const setLayoutMode = useCallback((layoutMode: LayoutMode) => {
+    updateProject(p => ({ ...p, layoutMode, layoutOverrides: undefined, legendOverride: undefined }));
+  }, [updateProject]);
+
   return {
     project,
     loadProject,
@@ -241,6 +246,7 @@ export function useLandscapeData() {
     updateLayoutOverride,
     updateLegendOverride,
     resetLayoutOverrides,
+    setLayoutMode,
     undo,
     canUndo: undoStack.current.length > 0,
   };

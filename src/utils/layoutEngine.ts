@@ -256,11 +256,182 @@ function tryLayout(
     bucketSize: { width: bucketW, height: bucketH },
     titleFontSize: titleFont,
     valueFontSize: valueFont,
+    legendPlacement: 'footer',
   };
 
   // Score: prefer larger buckets
   const area = bucketW * bucketH;
   return { result, fits: fitsInCanvas, score: area };
+}
+
+// Fill layout: the legend moves into the header band, so content runs to the bottom padding
+const FILL_CONTENT_H = CANVAS_H - PADDING - HEADER_H - PADDING;
+const FILL_MAX_ROWS = 4;
+const FILL_SEARCH_BUDGET = 500_000;
+const EMPTY_SLOT_PENALTY = 0.75;
+
+interface FillShelf {
+  start: number;  // first category index (inclusive)
+  end: number;    // last category index (exclusive)
+  rows: number;
+  cols: number[]; // bucket columns for each category in the shelf
+  bucketW: number;
+  empties: number;
+}
+
+interface FillPlan {
+  shelves: FillShelf[];
+  bucketW: number; // narrowest shelf's bucket width
+  bucketH: number;
+}
+
+// Plans depend only on bucket counts, so reuse them across re-renders
+const fillPlanCache = new Map<string, FillPlan | null>();
+
+/**
+ * Bucket height when shelves with this many total rows exactly fill the content height.
+ */
+function fillBucketHeight(rows: number, shelves: number): number {
+  const overhead = shelves * (CATEGORY_HEADER_H + 2 * CATEGORY_PAD)
+    + (shelves - 1) * CATEGORY_GAP
+    + (rows - shelves) * BUCKET_GAP;
+  return (FILL_CONTENT_H - overhead) / rows;
+}
+
+/**
+ * Split categories (kept in order) into full-width shelves and pick a row count
+ * per shelf. Bucket height is shared; bucket width stretches per shelf so every
+ * shelf spans the canvas. Prefers large, evenly sized buckets with no empty slots.
+ */
+function planFillLayout(counts: number[]): FillPlan | null {
+  const k = counts.length;
+
+  // Fewer row options as category count grows, to keep the search fast
+  let maxRows = FILL_MAX_ROWS;
+  while (maxRows > 1 && maxRows * Math.pow(maxRows + 1, k - 1) > FILL_SEARCH_BUDGET) maxRows--;
+
+  // shelfOptions[i][j] = candidate shelves holding categories i..j-1
+  const shelfOptions: FillShelf[][][] = [];
+  for (let i = 0; i < k; i++) {
+    shelfOptions[i] = [];
+    for (let j = i + 1; j <= k; j++) {
+      const group = counts.slice(i, j);
+      const options: FillShelf[] = [];
+      const rowLimit = Math.min(maxRows, Math.max(1, ...group));
+      for (let rows = 1; rows <= rowLimit; rows++) {
+        const cols = group.map(n => Math.max(1, Math.ceil(n / rows)));
+        const totalCols = cols.reduce((a, c) => a + c, 0);
+        const fixedW = (group.length - 1) * CATEGORY_GAP
+          + group.length * 2 * CATEGORY_PAD
+          + cols.reduce((a, c) => a + (c - 1) * BUCKET_GAP, 0);
+        const bucketW = (CONTENT_W - fixedW) / totalCols;
+        if (bucketW < MIN_BUCKET_W) continue;
+        const empties = group.reduce((a, n, gi) => a + (n === 0 ? 0 : cols[gi] * rows - n), 0);
+        options.push({ start: i, end: j, rows, cols, bucketW, empties });
+      }
+      shelfOptions[i][j] = options;
+    }
+  }
+
+  let bestScore = -Infinity;
+  let bestPlan: FillPlan | null = null;
+  const chosen: FillShelf[] = [];
+
+  const search = (i: number, rows: number, wMin: number, wMax: number, empties: number) => {
+    if (i === k) {
+      const h = fillBucketHeight(rows, chosen.length);
+      // Width past 3:1 or height past square doesn't help legibility
+      const usable = Math.min(wMin, 3 * h) * Math.min(h, wMin);
+      const score = usable * Math.sqrt(wMin / wMax) * Math.pow(EMPTY_SLOT_PENALTY, empties);
+      if (score > bestScore) {
+        bestScore = score;
+        bestPlan = { shelves: [...chosen], bucketW: wMin, bucketH: h };
+      }
+      return;
+    }
+    for (let j = i + 1; j <= k; j++) {
+      for (const shelf of shelfOptions[i][j]) {
+        const nextRows = rows + shelf.rows;
+        // More rows and shelves only shrink bucket height, so prune once too short
+        if (fillBucketHeight(nextRows, chosen.length + 1) < MIN_BUCKET_H) continue;
+        chosen.push(shelf);
+        search(j, nextRows, Math.min(wMin, shelf.bucketW), Math.max(wMax, shelf.bucketW), empties + shelf.empties);
+        chosen.pop();
+      }
+    }
+  };
+  search(0, 0, Infinity, 0, 0);
+
+  return bestPlan;
+}
+
+/**
+ * Fill layout: full-width rows of categories that cover the whole canvas.
+ * Returns null when no arrangement fits, so the caller can fall back to columns.
+ */
+function computeFillLayout(
+  categories: LandscapeProject['categories'],
+  branding: LandscapeProject['branding'],
+  allTitles: string[],
+  allValues: string[],
+): LayoutResult | null {
+  const counts = categories.map(c => c.buckets.length);
+  const key = counts.join(',');
+  if (!fillPlanCache.has(key)) fillPlanCache.set(key, planFillLayout(counts));
+  const plan = fillPlanCache.get(key);
+  if (!plan) return null;
+
+  const bucketH = Math.floor(plan.bucketH);
+  const stackH = plan.shelves.reduce((a, s) => a + categoryHeight(s.rows, bucketH), 0)
+    + (plan.shelves.length - 1) * CATEGORY_GAP;
+  let curY = CONTENT_Y + Math.floor((FILL_CONTENT_H - stackH) / 2);
+
+  const categoryLayouts: CategoryLayout[] = [];
+  for (const shelf of plan.shelves) {
+    const bucketW = Math.floor(shelf.bucketW);
+    const catH = categoryHeight(shelf.rows, bucketH);
+    const catWidths = shelf.cols.map(c => c * bucketW + (c - 1) * BUCKET_GAP + 2 * CATEGORY_PAD);
+    const shelfW = catWidths.reduce((a, w) => a + w, 0) + (catWidths.length - 1) * CATEGORY_GAP;
+    let curX = CONTENT_X + Math.floor((CONTENT_W - shelfW) / 2);
+
+    shelf.cols.forEach((subCols, offset) => {
+      const cat = categories[shelf.start + offset];
+      categoryLayouts.push({
+        categoryId: cat.id,
+        x: curX,
+        y: curY,
+        width: catWidths[offset],
+        height: catH,
+        headerHeight: CATEGORY_HEADER_H,
+        bucketGridCols: subCols,
+        bucketGridRows: shelf.rows,
+        buckets: cat.buckets.map((b, bi) => ({
+          bucketId: b.id,
+          x: CATEGORY_PAD + (bi % subCols) * (bucketW + BUCKET_GAP),
+          y: CATEGORY_PAD + Math.floor(bi / subCols) * (bucketH + BUCKET_GAP),
+          width: bucketW,
+          height: bucketH,
+        })),
+      });
+      curX += catWidths[offset] + CATEGORY_GAP;
+    });
+
+    curY += catH + CATEGORY_GAP;
+  }
+
+  // Size fonts for the narrowest buckets so text is uniform across rows
+  const narrowestW = Math.floor(plan.bucketW);
+  return {
+    canvasWidth: CANVAS_W,
+    canvasHeight: CANVAS_H,
+    header: { x: PADDING, y: PADDING, width: CONTENT_W, height: HEADER_H },
+    legend: { x: CANVAS_W - PADDING - 320, y: PADDING, width: 320, height: HEADER_H },
+    categories: categoryLayouts,
+    bucketSize: { width: narrowestW, height: bucketH },
+    titleFontSize: fitFontSize(allTitles, narrowestW - 12, bucketH * 0.45, branding.fontFamily, '800', 16),
+    valueFontSize: fitFontSize(allValues, narrowestW - 12, bucketH * 0.45, branding.fontFamily, '800', 22),
+    legendPlacement: 'header',
+  };
 }
 
 /**
@@ -282,6 +453,11 @@ export function computeLayout(project: LandscapeProject): LayoutResult {
         : `${b.values[0]} : ${b.values[1]}`
     )
   );
+
+  if (project.layoutMode === 'fill') {
+    const fill = computeFillLayout(categories, branding, allTitles, allValues);
+    if (fill) return fill;
+  }
 
   let best: { result: LayoutResult; score: number } | null = null;
 
@@ -312,5 +488,6 @@ function emptyLayout(): LayoutResult {
     bucketSize: { width: 0, height: 0 },
     titleFontSize: 12,
     valueFontSize: 18,
+    legendPlacement: 'footer',
   };
 }

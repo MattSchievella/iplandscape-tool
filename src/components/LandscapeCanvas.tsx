@@ -1,4 +1,4 @@
-import React, { forwardRef, useMemo, useState, useEffect, useCallback } from 'react';
+import React, { forwardRef, useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import type { LandscapeProject, CategoryLayoutOverride, LegendLayoutOverride } from '../types';
 import { CategoryBlock } from './CategoryBlock';
 import { computeLayout } from '../utils/layoutEngine';
@@ -191,9 +191,27 @@ export const LandscapeCanvas = forwardRef<HTMLDivElement, LandscapeCanvasProps>(
       };
     }, [resizeState, canvasScale, layout.categories, project.layoutOverrides, onUpdateLayoutOverride]);
 
+    // Track the legend card's size so header placement can right-align and center it
+    const legendRef = useRef<HTMLDivElement>(null);
+    const [legendSize, setLegendSize] = useState({ width: 300, height: 60 });
+    useEffect(() => {
+      const el = legendRef.current;
+      if (!el) return;
+      const observer = new ResizeObserver(() => {
+        setLegendSize({ width: el.offsetWidth, height: el.offsetHeight });
+      });
+      observer.observe(el);
+      return () => observer.disconnect();
+    }, []);
+
     // --- LEGEND DRAG HANDLERS ---
-    const defaultLegendX = layout.canvasWidth - PADDING - 300;
-    const defaultLegendY = layout.canvasHeight - PADDING - 60;
+    const inHeader = layout.legendPlacement === 'header';
+    const defaultLegendX = inHeader
+      ? layout.canvasWidth - PADDING - legendSize.width
+      : layout.canvasWidth - PADDING - 300;
+    const defaultLegendY = inHeader
+      ? layout.header.y + (layout.header.height - legendSize.height) / 2
+      : layout.canvasHeight - PADDING - 60;
 
     const handleLegendDragStart = useCallback((e: React.PointerEvent) => {
       e.preventDefault();
@@ -349,6 +367,7 @@ export const LandscapeCanvas = forwardRef<HTMLDivElement, LandscapeCanvasProps>(
 
         {/* Legend - draggable, independent card */}
         <div
+          ref={legendRef}
           onPointerDown={handleLegendDragStart}
           style={{
             position: 'absolute',

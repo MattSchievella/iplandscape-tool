@@ -9,12 +9,16 @@ export interface LegendLayoutOverride {
   y: number;
 }
 
+// 'columns' = masonry columns (default); 'fill' = full-width rows stretched to fill the canvas
+export type LayoutMode = 'columns' | 'fill';
+
 export interface LandscapeProject {
   title: string;
   subtitle?: string;
   legend: LegendConfig;
   categories: Category[];
   branding: BrandingConfig;
+  layoutMode?: LayoutMode;
   layoutOverrides?: Record<string, CategoryLayoutOverride>;
   legendOverride?: LegendLayoutOverride;
 }
@@ -108,4 +112,5 @@ export interface LayoutResult {
   bucketSize: { width: number; height: number };
   titleFontSize: number;
   valueFontSize: number;
+  legendPlacement: 'footer' | 'header'; // where the legend sits when it hasn't been dragged
 }

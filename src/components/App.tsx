@@ -31,6 +31,7 @@ export default function App() {
     updateLayoutOverride,
     updateLegendOverride,
     resetLayoutOverrides,
+    setLayoutMode,
   } = useLandscapeData();
 
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -244,6 +245,17 @@ export default function App() {
           className={`px-4 py-2 text-sm rounded-full ${sidePanel === 'branding' ? 'btn-ghost-active' : 'btn-ghost'}`}
         >
           Edit Design
+        </button>
+
+        <button
+          onClick={() => setLayoutMode(project.layoutMode === 'fill' ? 'columns' : 'fill')}
+          disabled={!hasData}
+          className={`px-4 py-2 text-sm rounded-full disabled:opacity-40 disabled:cursor-not-allowed ${project.layoutMode === 'fill' ? 'btn-ghost-active' : 'btn-ghost'}`}
+          title={project.layoutMode === 'fill'
+            ? 'Return to the column layout'
+            : 'Reflow categories into full-width rows that fill the canvas'}
+        >
+          Fill Screen
         </button>
 
         <div className="h-5 mx-1" style={{ borderLeft: '1px solid var(--border-subtle)' }} />
